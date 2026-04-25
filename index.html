@@ -726,6 +726,23 @@ function calcImplModStatus(m){const a=m.milestones.map(x=>x.status);if(a.every(s
 function calcImplPct(m){const t=m.milestones.length,d=m.milestones.filter(x=>x.status==='done').length,p=m.milestones.filter(x=>x.status==='active'||x.status==='today').length;return Math.round(((d+p*0.5)/t)*100);}
 let implEditTarget=null;
 
+async function loadImplData(){
+  try{
+    const{data,error}=await sb.from('impl_milestones').select('*');
+    if(error)throw error;
+    (data||[]).forEach(r=>{
+      const mod=implModules.find(m=>m.num===r.module_num);
+      if(mod&&mod.milestones[r.milestone_index]){
+        const ms=mod.milestones[r.milestone_index];
+        ms.status=r.status;
+        if(r.date_start)ms.date=r.date_start;
+        if(r.date_end!==undefined)ms.end=r.date_end||null;
+      }
+    });
+  }catch(e){console.error('loadImplData error',e);}
+  renderImpl();
+}
+
 function renderImpl(){
   const grid=document.getElementById('impl-grid');
   grid.innerHTML='';
@@ -781,20 +798,37 @@ function openImplModal(mi,msi){
   document.getElementById('impl-modal').classList.add('open');
 }
 function closeImplModal(){document.getElementById('impl-modal').classList.remove('open');implEditTarget=null;}
-function saveImplModal(){
+async function saveImplModal(){
   if(!implEditTarget)return;
   const{mi,msi}=implEditTarget;
   const d=document.getElementById('im-date').value;if(!d)return;
-  implModules[mi].milestones[msi].date=d;
-  implModules[mi].milestones[msi].end=document.getElementById('im-date-end').value||null;
-  implModules[mi].milestones[msi].status=document.getElementById('im-status').value;
-  closeImplModal();renderImpl();
+  const newStatus=document.getElementById('im-status').value;
+  const newEnd=document.getElementById('im-date-end').value||null;
+  showLoading('Menyimpan...');
+  closeImplModal();
+  try{
+    const mod=implModules[mi];
+    const{error}=await sb.from('impl_milestones').upsert({
+      module_num:mod.num,
+      milestone_index:msi,
+      status:newStatus,
+      date_start:d,
+      date_end:newEnd,
+      updated_at:new Date().toISOString()
+    },{onConflict:'module_num,milestone_index'});
+    if(error)throw error;
+    mod.milestones[msi].date=d;
+    mod.milestones[msi].end=newEnd;
+    mod.milestones[msi].status=newStatus;
+    hideLoading('✓ Tersimpan');
+    renderImpl();
+  }catch(e){console.error(e);hideLoading('⚠ Gagal menyimpan');}
 }
 document.getElementById('impl-modal').onclick=e=>{if(e.target===document.getElementById('impl-modal'))closeImplModal();};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCellModal();closeImplModal();closeConfirm();}});
 
 // INIT
-renderImpl();
+loadImplData();
 loadAllData();
 </script>
 </body>
