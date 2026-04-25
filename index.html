@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Blackjack & DGA — Project Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#ffffff;--bg2:#f7f7f7;--bg3:#efefef;--bg4:#e4e4e4;
+  --border:#e0e0e0;--border2:#c8c8c8;
+  --text:#111111;--text2:#555555;--text3:#999999;
+  --orange:#E8610A;--orange-light:#fff3ec;--orange-border:#ffd4b8;
+  --radius:10px;--radius-sm:6px;
+  --c-notyet:#e8e8e8;       --ct-notyet:#777777;
+  --c-provided:#dbeafe;     --ct-provided:#1e40af;
+  --c-injected:#fef3c7;     --ct-injected:#92400e;
+  --c-issuefound:#fee2e2;   --ct-issuefound:#991b1b;
+  --c-reinject:#ffedd5;     --ct-reinject:#c2410c;
+  --c-done:#dcfce7;         --ct-done:#166534;
+}
+body{font-family:Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* NAV */
+.top-nav{background:var(--text);color:#fff;padding:0 32px;display:flex;align-items:center;}
+.top-nav .brand{font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--orange);padding:14px 0;margin-right:32px;white-space:nowrap;}
+.top-nav .nav-tab{font-size:11px;font-weight:700;padding:16px 18px;cursor:pointer;border-bottom:3px solid transparent;color:#999;transition:all 0.15s;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;}
+.top-nav .nav-tab:hover{color:#fff;}
+.top-nav .nav-tab.active{color:#fff;border-bottom-color:var(--orange);}
+
+/* CONTAINER */
+.container{max-width:1200px;margin:0 auto;padding:36px 32px 80px;}
+
+/* HEADER */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid var(--text);}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:0.15em;color:var(--orange);text-transform:uppercase;margin-bottom:6px;}
+.page-title{font-size:28px;font-weight:700;color:var(--text);letter-spacing:-0.3px;line-height:1.2;}
+.page-title span{color:var(--orange);}
+.page-subtitle{font-size:12px;color:var(--text3);margin-top:5px;}
+.today-chip{font-size:11px;font-weight:700;color:var(--text2);background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:5px 14px;display:inline-block;}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.metric-card{background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);padding:18px 18px 14px;transition:box-shadow 0.15s;}
+.metric-card:hover{box-shadow:0 2px 12px rgba(0,0,0,0.07);}
+.metric-card.accent{border-color:var(--orange);border-top:3px solid var(--orange);}
+.metric-label{font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--text3);text-transform:uppercase;margin-bottom:6px;}
+.metric-value{font-size:32px;font-weight:700;color:var(--text);line-height:1;letter-spacing:-1px;}
+.metric-value.orange{color:var(--orange);}
+.metric-value.green{color:#166534;}
+.metric-value.blue{color:#1e40af;}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+
+/* PROGRESS */
+.progress-section{background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:28px;}
+.progress-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+.progress-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.08em;}
+.progress-pct{font-size:22px;font-weight:700;color:var(--orange);}
+.prog-track{height:10px;background:var(--bg4);border-radius:5px;overflow:hidden;margin-bottom:8px;}
+.prog-fill{height:100%;border-radius:5px;background:var(--orange);transition:width 0.5s ease;}
+.prog-legend{display:flex;gap:14px;flex-wrap:wrap;}
+.prog-legend-item{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;}
+.prog-legend-dot{width:8px;height:8px;border-radius:50%;}
+
+/* SUBTABS */
+.subtabs{display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--border);}
+.subtab{font-size:12px;font-weight:700;padding:10px 22px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--text3);transition:all 0.15s;text-transform:uppercase;letter-spacing:0.05em;}
+.subtab:hover{color:var(--text);}
+.subtab.active{color:var(--orange);border-bottom-color:var(--orange);}
+
+/* TOOLBAR */
+.toolbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px;align-items:center;}
+.btn-add-month{background:var(--orange);color:#fff;border:none;border-radius:var(--radius-sm);font-family:Arial,sans-serif;font-size:11px;font-weight:700;padding:7px 14px;cursor:pointer;letter-spacing:0.04em;text-transform:uppercase;transition:background 0.12s;}
+.btn-add-month:hover{background:#c9520a;}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border:1.5px solid var(--border);border-radius:var(--radius);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{background:var(--text);color:#fff;padding:0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;white-space:nowrap;text-align:center;position:relative;}
+thead th:first-child{text-align:left;width:220px;padding:10px 14px;}
+thead th.month-col{min-width:115px;padding:0;}
+.th-month-wrap{display:flex;flex-direction:column;align-items:center;}
+.th-month-label{padding:10px 10px 6px;font-size:10px;font-weight:700;letter-spacing:0.07em;}
+.th-del-btn{width:100%;background:rgba(255,255,255,0.08);border:none;border-top:1px solid rgba(255,255,255,0.12);color:#bbb;font-size:9px;font-family:Arial,sans-serif;cursor:pointer;padding:4px;letter-spacing:0.05em;text-transform:uppercase;transition:background 0.12s;}
+.th-del-btn:hover{background:rgba(232,97,10,0.4);color:#fff;}
+
+tr.group-header td{background:var(--bg3);font-weight:700;font-size:11px;color:var(--text2);padding:7px 14px;text-transform:uppercase;letter-spacing:0.06em;border-top:1px solid var(--border);}
+tr.data-row td{border-bottom:1px solid var(--border);vertical-align:top;}
+tr.data-row:hover td{background:#fafafa;}
+tr.data-row td.item-name{padding:10px 14px;font-size:12px;font-weight:700;color:var(--text);vertical-align:middle;}
+tr.data-row td.cell-td{padding:6px 8px;text-align:center;}
+
+/* STATUS CELL */
+.status-cell{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;}
+.status-badge{display:inline-block;font-size:9px;font-weight:700;padding:3px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;width:100%;text-align:center;transition:opacity 0.1s;}
+.status-badge:hover{opacity:0.8;}
+.deadline-label{font-size:9px;color:var(--text3);font-style:italic;}
+.status-notyet    {background:var(--c-notyet);    color:var(--ct-notyet);}
+.status-provided  {background:var(--c-provided);  color:var(--ct-provided);}
+.status-injected  {background:var(--c-injected);  color:var(--ct-injected);}
+.status-issuefound{background:var(--c-issuefound);color:var(--ct-issuefound);}
+.status-reinject  {background:var(--c-reinject);  color:var(--ct-reinject);}
+.status-done      {background:var(--c-done);      color:var(--ct-done);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:999;opacity:0;pointer-events:none;transition:opacity 0.18s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--bg);border:1.5px solid var(--border2);border-top:3px solid var(--orange);border-radius:var(--radius);padding:26px 24px 20px;width:440px;max-height:88vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.18);transform:translateY(10px) scale(0.98);transition:transform 0.2s ease;}
+.modal-overlay.open .modal{transform:translateY(0) scale(1);}
+.modal-eyebrow{font-size:10px;font-weight:700;color:var(--orange);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;}
+.modal-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;line-height:1.3;}
+.modal-subtitle{font-size:11px;color:var(--text3);margin-bottom:16px;}
+.form-group{margin-bottom:14px;}
+.form-label{display:block;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:Arial,sans-serif;font-size:12px;padding:8px 10px;outline:none;transition:border-color 0.12s;-webkit-appearance:none;appearance:none;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--orange);}
+.form-textarea{resize:vertical;min-height:60px;}
+
+/* STATUS GRID */
+.status-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:14px;}
+.status-opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.12s;position:relative;}
+.status-opt:hover{border-color:var(--border2);background:var(--bg2);}
+.status-opt.selected{border-color:var(--orange);background:var(--orange-light);}
+.status-opt.disabled{opacity:0.3;cursor:not-allowed;pointer-events:none;}
+.status-opt-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.status-opt-label{font-size:11px;font-weight:700;flex:1;}
+.status-opt-pct{font-size:10px;color:var(--text3);}
+
+/* MODAL ACTIONS */
+.modal-actions{display:flex;gap:10px;margin-top:16px;}
+.btn{flex:1;padding:9px;border-radius:var(--radius-sm);font-family:Arial,sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.12s;border:none;letter-spacing:0.04em;text-transform:uppercase;}
+.btn-primary{background:var(--orange);color:#fff;}
+.btn-primary:hover{background:#c9520a;}
+.btn-secondary{background:var(--bg2);color:var(--text2);border:1.5px solid var(--border);}
+.btn-secondary:hover{background:var(--bg3);}
+
+/* HISTORY */
+.history-section{margin-top:16px;border-top:1px solid var(--border);padding-top:14px;}
+.history-title{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;}
+.history-empty{font-size:11px;color:var(--text3);font-style:italic;}
+.history-item{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start;}
+.history-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.history-status{font-size:11px;font-weight:700;color:var(--text);}
+.history-meta{font-size:10px;color:var(--text3);margin-top:1px;}
+.history-note{font-size:10px;color:var(--text2);margin-top:2px;font-style:italic;}
+
+/* IMPL */
+.impl-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+.impl-module-card{background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:box-shadow 0.15s,transform 0.15s;}
+.impl-module-card:hover{box-shadow:0 4px 20px rgba(0,0,0,0.07);transform:translateY(-1px);}
+.impl-module-card.s-done{border-top:3px solid #111;}
+.impl-module-card.s-active,.impl-module-card.s-today{border-top:3px solid var(--orange);}
+.impl-module-card.s-upcoming{border-top:3px solid var(--border2);}
+.impl-header{padding:16px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;background:var(--bg2);}
+.impl-num{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:3px;}
+.impl-name{font-size:16px;font-weight:700;color:var(--text);}
+.impl-prog-wrap{padding:8px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+.impl-bar-track{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;}
+.impl-bar-fill{height:100%;border-radius:2px;transition:width 0.5s;}
+.impl-pct{font-size:10px;font-weight:700;color:var(--text3);min-width:28px;text-align:right;}
+.ms-list{padding:4px 0;}
+.ms-row{display:flex;align-items:flex-start;gap:10px;padding:6px 18px;transition:background 0.1s;}
+.ms-row:hover{background:var(--bg2);}
+.ms-dot{width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.ms-body{flex:1;}
+.ms-name-text{font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.ms-date-row{display:flex;align-items:center;gap:8px;margin-top:2px;}
+.ms-date-text{font-size:10px;color:var(--text3);}
+.ms-edit-btn{background:none;border:1px solid var(--border2);border-radius:3px;font-size:9px;font-family:Arial,sans-serif;font-weight:700;color:var(--text3);padding:1px 5px;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;transition:all 0.12s;}
+.ms-edit-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light);}
+.ms-badge{font-size:9px;font-weight:700;letter-spacing:0.08em;padding:2px 8px;border-radius:20px;text-transform:uppercase;flex-shrink:0;margin-top:1px;}
+.ms-done-b{background:#111;color:#fff;}
+.ms-active-b{background:var(--orange-light);color:var(--orange);border:1px solid var(--orange-border);}
+.ms-today-b{background:var(--orange);color:#fff;}
+.ms-upcoming-b{background:var(--bg3);color:var(--text3);border:1px solid var(--border2);}
+.mod-badge{font-size:9px;font-weight:700;letter-spacing:0.1em;padding:3px 10px;border-radius:20px;text-transform:uppercase;flex-shrink:0;margin-top:2px;}
+
+/* IMPL EDIT MODAL */
+.impl-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity 0.18s;}
+.impl-modal-overlay.open{opacity:1;pointer-events:all;}
+.impl-modal{background:var(--bg);border:1.5px solid var(--border2);border-top:3px solid var(--orange);border-radius:var(--radius);padding:24px;width:320px;box-shadow:0 12px 40px rgba(0,0,0,0.15);transform:translateY(10px) scale(0.98);transition:transform 0.2s;}
+.impl-modal-overlay.open .impl-modal{transform:translateY(0) scale(1);}
+
+/* DELETE MONTH CONFIRM */
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:1100;opacity:0;pointer-events:none;transition:opacity 0.15s;}
+.confirm-overlay.open{opacity:1;pointer-events:all;}
+.confirm-box{background:var(--bg);border:1.5px solid var(--border2);border-top:3px solid #dc2626;border-radius:var(--radius);padding:24px;width:300px;box-shadow:0 12px 40px rgba(0,0,0,0.18);transform:scale(0.96);transition:transform 0.15s;}
+.confirm-overlay.open .confirm-box{transform:scale(1);}
+.confirm-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.confirm-body{font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.5;}
+.confirm-actions{display:flex;gap:10px;}
+.btn-danger{flex:1;padding:9px;border-radius:var(--radius-sm);font-family:Arial,sans-serif;font-size:11px;font-weight:700;cursor:pointer;border:none;letter-spacing:0.04em;text-transform:uppercase;background:#dc2626;color:#fff;transition:background 0.12s;}
+.btn-danger:hover{background:#b91c1c;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.fade-up{animation:fadeUp 0.35s ease both;}
+@media(max-width:768px){
+  .container{padding:20px 16px 60px;}
+  .metrics{grid-template-columns:repeat(2,1fr);}
+  .impl-grid{grid-template-columns:1fr;}
+  .page-header{flex-direction:column;gap:12px;}
+  .modal,.impl-modal{width:95vw;}
+}
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <div class="brand">BJ &amp; DGA</div>
+  <div class="nav-tab active" onclick="switchMainTab('impl')">ERPNext Implementation</div>
+  <div class="nav-tab" onclick="switchMainTab('inject')">Inject Data ERPNext</div>
+</div>
+
+<div class="container">
+
+  <!-- TAB 1: IMPLEMENTATION -->
+  <div id="tab-impl">
+    <div class="page-header fade-up">
+      <div>
+        <div class="eyebrow">Project Dashboard</div>
+        <h1 class="page-title">Blackjack — <span>ERPNext</span> Implementation</h1>
+        <p class="page-subtitle">4 modules · April 2026 sprint</p>
+      </div>
+      <div style="text-align:right;">
+        <div class="today-chip" id="impl-today"></div>
+        <div style="font-size:10px;color:var(--text3);margin-top:5px;">ERPNext v15</div>
+      </div>
+    </div>
+    <div class="metrics fade-up">
+      <div class="metric-card"><div class="metric-label">Total Modul</div><div class="metric-value">4</div><div class="metric-sub">Keseluruhan project</div></div>
+      <div class="metric-card"><div class="metric-label">Selesai</div><div class="metric-value green" id="impl-m-done">-</div><div class="metric-sub">Modul selesai</div></div>
+      <div class="metric-card"><div class="metric-label">In Progress</div><div class="metric-value blue" id="impl-m-active">-</div><div class="metric-sub">Sedang berjalan</div></div>
+      <div class="metric-card accent"><div class="metric-label">Progress</div><div class="metric-value orange" id="impl-m-pct">-</div><div class="metric-sub">Keseluruhan</div></div>
+    </div>
+    <div class="progress-section fade-up">
+      <div class="progress-header">
+        <span class="progress-title">Overall Implementation Progress</span>
+        <span class="progress-pct" id="impl-overall-pct">-</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="impl-prog-fill" style="width:0%"></div></div>
+      <div class="prog-legend">
+        <div class="prog-legend-item"><div class="prog-legend-dot" style="background:#111"></div>Selesai</div>
+        <div class="prog-legend-item"><div class="prog-legend-dot" style="background:var(--orange)"></div>Berjalan</div>
+        <div class="prog-legend-item"><div class="prog-legend-dot" style="background:var(--bg4);border:1px solid var(--border2)"></div>Upcoming</div>
+      </div>
+    </div>
+    <div class="impl-grid" id="impl-grid"></div>
+  </div>
+
+  <!-- TAB 2: INJECT DATA -->
+  <div id="tab-inject" style="display:none;">
+    <div class="page-header fade-up">
+      <div>
+        <div class="eyebrow">Inject Data</div>
+        <h1 class="page-title"><span>ERPNext</span> Data Migration</h1>
+        <p class="page-subtitle">Blackjack &amp; DGA · mulai Januari 2026</p>
+      </div>
+      <div style="text-align:right;">
+        <div class="today-chip" id="inject-today"></div>
+      </div>
+    </div>
+    <div class="metrics fade-up">
+      <div class="metric-card"><div class="metric-label">Total Cell</div><div class="metric-value" id="inj-total">-</div><div class="metric-sub">Semua company</div></div>
+      <div class="metric-card"><div class="metric-label">Done</div><div class="metric-value green" id="inj-done">-</div><div class="metric-sub">Termigrasi</div></div>
+      <div class="metric-card"><div class="metric-label">On Going</div><div class="metric-value blue" id="inj-ongoing">-</div><div class="metric-sub">Sedang diproses</div></div>
+      <div class="metric-card accent"><div class="metric-label">Progress</div><div class="metric-value orange" id="inj-pct">-</div><div class="metric-sub">Weighted avg</div></div>
+    </div>
+    <div class="progress-section fade-up">
+      <div class="progress-header">
+        <span class="progress-title">Overall Inject Progress</span>
+        <span class="progress-pct" id="inj-overall-pct">-</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="inj-prog-fill" style="width:0%"></div></div>
+      <div class="prog-legend">
+        <div class="prog-legend-item"><div class="prog-legend-dot" style="background:var(--c-done)"></div>Done</div>
+        <div class="prog-legend-item"><div class="prog-legend-dot" style="background:var(--c-reinject)"></div>Re-Inject</div>
+        <div class="prog-legend-item"><div class="prog-legend-dot" style="background:var(--c-issuefound)"></div>Issue Found</div>
+        <div class="prog-legend-item"><div class="prog-legend-dot" style="background:var(--c-injected)"></div>Injected</div>
+        <div class="prog-legend-item"><div class="prog-legend-dot" style="background:var(--c-provided)"></div>Data Provided</div>
+        <div class="prog-legend-item"><div class="prog-legend-dot" style="background:var(--c-notyet);border:1px solid var(--border2)"></div>Not Yet</div>
+      </div>
+    </div>
+    <div class="subtabs">
+      <div class="subtab active" onclick="switchCompany('BJ')">Blackjack</div>
+      <div class="subtab" onclick="switchCompany('DGA')">DGA</div>
+    </div>
+    <div class="toolbar">
+      <button class="btn-add-month" onclick="addMonth()">+ Tambah Bulan</button>
+    </div>
+    <div class="table-wrap fade-up">
+      <table id="inject-table">
+        <thead id="inject-thead"></thead>
+        <tbody id="inject-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- CELL MODAL -->
+<div class="modal-overlay" id="cell-modal">
+  <div class="modal">
+    <div class="modal-eyebrow">Edit Status & Deadline</div>
+    <div class="modal-title" id="cm-title"></div>
+    <div class="modal-subtitle" id="cm-subtitle"></div>
+    <div class="form-label" style="margin-bottom:8px;">Status</div>
+    <div class="status-grid" id="cm-status-grid"></div>
+    <div class="form-group">
+      <label class="form-label">Deadline</label>
+      <input type="date" class="form-input" id="cm-date"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes <span style="color:var(--text3);font-weight:400;font-size:9px;">(opsional)</span></label>
+      <textarea class="form-textarea" id="cm-notes" placeholder="Tambahkan catatan..."></textarea>
+    </div>
+    <div class="history-section">
+      <div class="history-title">History Log</div>
+      <div id="cm-history"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeCellModal()">Batal</button>
+      <button class="btn btn-primary" onclick="saveCellModal()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPL MILESTONE MODAL -->
+<div class="impl-modal-overlay" id="impl-modal">
+  <div class="impl-modal">
+    <div class="modal-eyebrow">Edit Milestone</div>
+    <div class="modal-title" id="im-title" style="margin-bottom:16px;font-size:14px;"></div>
+    <div class="form-group">
+      <label class="form-label">Tanggal Mulai</label>
+      <input type="date" class="form-input" id="im-date"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tanggal Selesai <span style="color:var(--text3);font-size:9px;font-weight:400;">(opsional)</span></label>
+      <input type="date" class="form-input" id="im-date-end"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select class="form-select" id="im-status">
+        <option value="done">Selesai</option>
+        <option value="active">Berjalan</option>
+        <option value="today">Hari ini</option>
+        <option value="upcoming">Upcoming</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeImplModal()">Batal</button>
+      <button class="btn btn-primary" onclick="saveImplModal()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MONTH CONFIRM -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">Hapus Bulan?</div>
+    <div class="confirm-body" id="confirm-body">Semua data di bulan ini akan terhapus. Lanjutkan?</div>
+    <div class="confirm-actions">
+      <button class="btn btn-secondary" onclick="closeConfirm()">Batal</button>
+      <button class="btn-danger" onclick="confirmDeleteMonth()">Hapus</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════
+// UTILS
+// ══════════════════════════════════
+const DAYS=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const MONTHS_S=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const MONTHS_L=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function todayStr(){const d=new Date();return DAYS[d.getDay()]+', '+d.getDate()+' '+MONTHS_L[d.getMonth()]+' '+d.getFullYear();}
+function fmtDate(iso){if(!iso)return'';const d=new Date(iso+'T00:00:00');return d.getDate()+' '+MONTHS_S[d.getMonth()]+' '+d.getFullYear();}
+function fmtRange(s,e){if(!e)return fmtDateLong(s);const d1=new Date(s+'T00:00:00'),d2=new Date(e+'T00:00:00');if(d1.getMonth()===d2.getMonth()&&d1.getFullYear()===d2.getFullYear())return d1.getDate()+'–'+d2.getDate()+' '+MONTHS_S[d1.getMonth()]+' '+d1.getFullYear();return d1.getDate()+' '+MONTHS_S[d1.getMonth()]+' – '+d2.getDate()+' '+MONTHS_S[d2.getMonth()]+' '+d2.getFullYear();}
+function fmtDateLong(iso){if(!iso)return'';const d=new Date(iso+'T00:00:00');return DAYS[d.getDay()]+', '+d.getDate()+' '+MONTHS_S[d.getMonth()]+' '+d.getFullYear();}
+document.getElementById('impl-today').textContent=todayStr();
+document.getElementById('inject-today').textContent=todayStr();
+
+// ══════════════════════════════════
+// MAIN TAB
+// ══════════════════════════════════
+function switchMainTab(tab){
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='impl'?0:1)));
+  document.getElementById('tab-impl').style.display=tab==='impl'?'':'none';
+  document.getElementById('tab-inject').style.display=tab==='inject'?'':'none';
+}
+
+// ══════════════════════════════════
+// STATUS CONFIG — no "reviewed", done always available
+// ══════════════════════════════════
+const ALL_STATUSES=['notyet','provided','injected','issuefound','reinject','done'];
+const STATUS_META={
+  notyet:    {label:'Not Yet',      pct:0,   dot:'#c0c0c0',bg:'var(--c-notyet)',    fg:'var(--ct-notyet)'},
+  provided:  {label:'Data Provided',pct:20,  dot:'#93c5fd',bg:'var(--c-provided)',  fg:'var(--ct-provided)'},
+  injected:  {label:'Injected',     pct:40,  dot:'#fcd34d',bg:'var(--c-injected)',  fg:'var(--ct-injected)'},
+  issuefound:{label:'Issue Found',  pct:60,  dot:'#fca5a5',bg:'var(--c-issuefound)',fg:'var(--ct-issuefound)'},
+  reinject:  {label:'Re-Inject',    pct:70,  dot:'#fdba74',bg:'var(--c-reinject)',  fg:'var(--ct-reinject)'},
+  done:      {label:'Done',         pct:100, dot:'#86efac',bg:'var(--c-done)',      fg:'var(--ct-done)'},
+};
+// All statuses can transition to Done freely.
+// Allowed next per status (plus Done always allowed):
+const ALLOWED_NEXT={
+  notyet:    ['provided','done'],
+  provided:  ['injected','issuefound','reinject','done'],
+  injected:  ['issuefound','reinject','done'],
+  issuefound:['reinject','done'],
+  reinject:  ['injected','issuefound','done'],
+  done:      ['notyet'], // allow reset
+};
+
+// ══════════════════════════════════
+// INJECT DATA
+// ══════════════════════════════════
+const INJECT_ITEMS={
+  BJ:[
+    {group:'Master Data',items:['Master Barang','Master Customer','Master Supplier','Chart of Account (COA)','Opening Balance 31 Desember 2025']},
+    {group:'Pembelian',items:['Opening Balance AP 31 Desember 2025','Purchase Order','Purchase Receive','Purchase Invoice','PI non stock (Aset)','PI non stock (Beban)','Purchase Payment','Retur Pembelian']},
+    {group:'Penjualan',items:['Opening Balance AR 31 Desember 2025','Opening Balance Uang Muka Penjualan 31 Des 2025','Sales Order','Delivery Note','Sales Invoice','Sales Invoice Dibayar Dimuka','SI non stock','Sales Payment (All)','Retur Penjualan','Jurnal HPP Retur Penjualan']},
+    {group:'Kas Bank',items:['Pembayaran & Pencatatan Beban','Penerimaan','Transfer Bank']},
+    {group:'Lainnya',items:['Jurnal','Penyesuaian Persediaan','Fixed Asset','Request Report and Printing','Master Data Barang (Fix Opening Stock)']},
+  ],
+  DGA:[
+    {group:'Master Data',items:['Master Barang','Master Customer','Master Supplier','Chart of Account (COA)','Opening Balance 31 Desember 2025']},
+    {group:'Pembelian',items:['Opening Balance AP 31 Desember 2025','Purchase Order','Purchase Receive','Purchase Invoice','PI non stock (Aset)','PI non stock (Beban)','Purchase Payment','Retur Pembelian']},
+    {group:'Penjualan',items:['Opening Balance AR 31 Desember 2025','Opening Balance Uang Muka Penjualan 31 Des 2025','Sales Order','Delivery Note','Sales Invoice','Sales Invoice Dibayar Dimuka','SI non stock','Sales Payment (All)','Retur Penjualan','Jurnal HPP Retur Penjualan']},
+    {group:'Kas Bank',items:['Pembayaran & Pencatatan Beban','Penerimaan','Transfer Bank']},
+    {group:'Lainnya',items:['Jurnal','Penyesuaian Persediaan','Fixed Asset','Request Report and Printing','Benerin Master Barang (Fix Opening Stock)']},
+  ],
+};
+
+const cellData={BJ:{},DGA:{}};
+let activeMonths=['Januari','Februari','Maret'];
+let activeCompany='BJ';
+let monthToDelete=null;
+
+function getCell(co,item,month){
+  const k=co+'|'+item+'|'+month;
+  if(!cellData[co][k])cellData[co][k]={status:'notyet',deadline:'',history:[]};
+  return cellData[co][k];
+}
+function setCell(co,item,month,data){cellData[co][co+'|'+item+'|'+month]=data;}
+
+function addMonth(){
+  const idx=MONTHS_L.indexOf(activeMonths[activeMonths.length-1]);
+  if(idx<11){activeMonths.push(MONTHS_L[idx+1]);renderInjectTable();}
+  else alert('Sudah sampai Desember.');
+}
+
+function askDeleteMonth(month){
+  monthToDelete=month;
+  document.getElementById('confirm-title').textContent='Hapus Bulan '+month+'?';
+  document.getElementById('confirm-body').textContent='Semua data inject bulan '+month+' untuk kedua company akan dihapus. Tindakan ini tidak bisa dibatalkan.';
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirm(){document.getElementById('confirm-overlay').classList.remove('open');monthToDelete=null;}
+function confirmDeleteMonth(){
+  if(!monthToDelete)return;
+  if(activeMonths.length<=1){alert('Minimal harus ada 1 bulan.');closeConfirm();return;}
+  // clear data
+  ['BJ','DGA'].forEach(co=>{
+    INJECT_ITEMS[co].forEach(g=>g.items.forEach(item=>{
+      delete cellData[co][co+'|'+item+'|'+monthToDelete];
+    }));
+  });
+  activeMonths=activeMonths.filter(m=>m!==monthToDelete);
+  closeConfirm();
+  renderInjectTable();
+}
+
+function switchCompany(co){
+  activeCompany=co;
+  document.querySelectorAll('.subtab').forEach((t,i)=>t.classList.toggle('active',i===(co==='BJ'?0:1)));
+  renderInjectTable();
+}
+
+function escAttr(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+
+function renderInjectTable(){
+  const thead=document.getElementById('inject-thead');
+  const tbody=document.getElementById('inject-tbody');
+  // HEADER
+  let thHTML='<tr><th>Aktivitas</th>';
+  activeMonths.forEach(m=>{
+    thHTML+=`<th class="month-col"><div class="th-month-wrap">
+      <div class="th-month-label">${m}</div>
+      <button class="th-del-btn" onclick="askDeleteMonth('${m}')">✕ Hapus</button>
+    </div></th>`;
+  });
+  thHTML+='</tr>';
+  thead.innerHTML=thHTML;
+  // BODY
+  let tbHTML='';
+  INJECT_ITEMS[activeCompany].forEach(g=>{
+    tbHTML+=`<tr class="group-header"><td colspan="${1+activeMonths.length}">${g.group}</td></tr>`;
+    g.items.forEach(item=>{
+      tbHTML+=`<tr class="data-row"><td class="item-name">${item}</td>`;
+      activeMonths.forEach(month=>{
+        const cell=getCell(activeCompany,item,month);
+        const meta=STATUS_META[cell.status];
+        const dlLabel=cell.deadline?`<div class="deadline-label">📅 ${fmtDate(cell.deadline)}</div>`:'';
+        tbHTML+=`<td class="cell-td"><div class="status-cell" onclick="openCellModal('${activeCompany}','${escAttr(item)}','${month}')">
+          <span class="status-badge status-${cell.status}">${meta.label}</span>
+          ${dlLabel}
+        </div></td>`;
+      });
+      tbHTML+='</tr>';
+    });
+  });
+  tbody.innerHTML=tbHTML;
+  updateInjectSummary();
+}
+
+function updateInjectSummary(){
+  let total=0,done=0,ongoing=0,wsum=0;
+  ['BJ','DGA'].forEach(co=>{
+    INJECT_ITEMS[co].forEach(g=>g.items.forEach(item=>{
+      activeMonths.forEach(month=>{
+        const cell=getCell(co,item,month);
+        total++;
+        wsum+=STATUS_META[cell.status].pct;
+        if(cell.status==='done')done++;
+        else if(cell.status!=='notyet')ongoing++;
+      });
+    }));
+  });
+  const avg=total>0?Math.round(wsum/total):0;
+  document.getElementById('inj-total').textContent=total;
+  document.getElementById('inj-done').textContent=done;
+  document.getElementById('inj-ongoing').textContent=ongoing;
+  document.getElementById('inj-pct').textContent=avg+'%';
+  document.getElementById('inj-overall-pct').textContent=avg+'%';
+  document.getElementById('inj-prog-fill').style.width=avg+'%';
+}
+
+// ── CELL MODAL ──
+let cellModalTarget=null;
+let cmSelectedStatus=null;
+
+function openCellModal(co,item,month){
+  cellModalTarget={co,item,month};
+  const cell=getCell(co,item,month);
+  cmSelectedStatus=cell.status;
+  document.getElementById('cm-title').textContent=item;
+  document.getElementById('cm-subtitle').textContent=(co==='BJ'?'Blackjack':'DGA')+' · '+month+' 2026';
+  document.getElementById('cm-date').value=cell.deadline||'';
+  document.getElementById('cm-notes').value='';
+  renderStatusGrid(cell.status);
+  renderHistory(cell.history);
+  document.getElementById('cell-modal').classList.add('open');
+}
+
+function renderStatusGrid(currentStatus){
+  const allowed=ALLOWED_NEXT[currentStatus]||[];
+  const grid=document.getElementById('cm-status-grid');
+  grid.innerHTML='';
+  ALL_STATUSES.forEach(s=>{
+    const meta=STATUS_META[s];
+    const isCurrent=s===currentStatus;
+    const isAllowed=isCurrent||allowed.includes(s);
+    const opt=document.createElement('div');
+    opt.className='status-opt'+(isCurrent?' selected':'')+(isAllowed?'':' disabled');
+    opt.innerHTML=`<div class="status-opt-dot" style="background:${meta.dot}"></div>
+      <span class="status-opt-label">${meta.label}</span>
+      <span class="status-opt-pct">${meta.pct}%</span>`;
+    if(isAllowed){
+      opt.onclick=()=>{
+        cmSelectedStatus=s;
+        document.querySelectorAll('.status-opt').forEach(o=>o.classList.remove('selected'));
+        opt.classList.add('selected');
+      };
+    }
+    grid.appendChild(opt);
+  });
+}
+
+function renderHistory(history){
+  const el=document.getElementById('cm-history');
+  if(!history||!history.length){el.innerHTML='<div class="history-empty">Belum ada perubahan.</div>';return;}
+  el.innerHTML=[...history].reverse().map(h=>{
+    const meta=STATUS_META[h.status]||{label:h.status,dot:'#ccc'};
+    const ts=h.ts?new Date(h.ts).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+    return`<div class="history-item">
+      <div class="history-dot" style="background:${meta.dot}"></div>
+      <div>
+        <div class="history-status">${meta.label}</div>
+        <div class="history-meta">${h.deadline?'Deadline: '+fmtDate(h.deadline)+' · ':''} ${ts}</div>
+        ${h.notes?`<div class="history-note">"${h.notes}"</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveCellModal(){
+  if(!cellModalTarget)return;
+  const{co,item,month}=cellModalTarget;
+  const cell=getCell(co,item,month);
+  const newStatus=cmSelectedStatus;
+  const newDeadline=document.getElementById('cm-date').value;
+  const notes=document.getElementById('cm-notes').value.trim();
+  cell.history.push({status:newStatus,deadline:newDeadline,notes,ts:Date.now()});
+  cell.status=newStatus;
+  cell.deadline=newDeadline;
+  setCell(co,item,month,cell);
+  closeCellModal();
+  renderInjectTable();
+}
+function closeCellModal(){document.getElementById('cell-modal').classList.remove('open');cellModalTarget=null;}
+document.getElementById('cell-modal').onclick=e=>{if(e.target===document.getElementById('cell-modal'))closeCellModal();};
+document.getElementById('confirm-overlay').onclick=e=>{if(e.target===document.getElementById('confirm-overlay'))closeConfirm();};
+
+// ══════════════════════════════════
+// IMPLEMENTATION TAB
+// ══════════════════════════════════
+const implModules=[
+  {num:1,title:'Buy (Inbound)',milestones:[
+    {name:'Offline Workshop',date:'2026-03-16',end:null,status:'done'},
+    {name:'Erasys Custom Features',date:'2026-03-17',end:'2026-03-30',status:'done'},
+    {name:'Sprint Review',date:'2026-03-31',end:null,status:'done'},
+    {name:'Trial With End User',date:'2026-04-01',end:'2026-04-06',status:'done'},
+  ]},
+  {num:2,title:'Sales (Outbound)',milestones:[
+    {name:'Offline Workshop',date:'2026-04-07',end:null,status:'done'},
+    {name:'Erasys Custom Features',date:'2026-04-07',end:'2026-04-12',status:'done'},
+    {name:'Sprint Review',date:'2026-04-13',end:null,status:'done'},
+    {name:'Trial With End User',date:'2026-04-14',end:'2026-04-18',status:'done'},
+  ]},
+  {num:3,title:'Warehouse',milestones:[
+    {name:'Offline Workshop',date:'2026-04-14',end:null,status:'done'},
+    {name:'Erasys Custom Features',date:'2026-04-15',end:'2026-04-20',status:'done'},
+    {name:'Offline Sprint Review + Barcode',date:'2026-04-21',end:null,status:'done'},
+    {name:'Trial With End User',date:'2026-04-22',end:'2026-04-25',status:'upcoming'},
+  ]},
+  {num:4,title:'Custom Features',milestones:[
+    {name:'Pre Workshop Custom Features',date:'2026-04-20',end:null,status:'done'},
+    {name:'Online Workshop',date:'2026-04-23',end:null,status:'today'},
+    {name:'Erasys Custom Features',date:'2026-04-23',end:'2026-04-27',status:'upcoming'},
+    {name:'Sprint Review',date:'2026-04-28',end:null,status:'upcoming'},
+    {name:'Trial With End User',date:'2026-04-29',end:'2026-04-30',status:'upcoming'},
+  ]},
+];
+const implMeta={done:{label:'Selesai',dot:'#111',badgeCls:'ms-done-b'},active:{label:'Berjalan',dot:'#E8610A',badgeCls:'ms-active-b'},today:{label:'Hari ini',dot:'#E8610A',badgeCls:'ms-today-b'},upcoming:{label:'Upcoming',dot:'#ccc',badgeCls:'ms-upcoming-b'}};
+const implBarColor={done:'#111',active:'#E8610A',today:'#E8610A',upcoming:'#e0e0e0'};
+function calcImplModStatus(m){const a=m.milestones.map(x=>x.status);if(a.every(s=>s==='done'))return'done';if(a.some(s=>s==='today'))return'today';if(a.some(s=>s==='active'||s==='done'))return'active';return'upcoming';}
+function calcImplPct(m){const t=m.milestones.length,d=m.milestones.filter(x=>x.status==='done').length,p=m.milestones.filter(x=>x.status==='active'||x.status==='today').length;return Math.round(((d+p*0.5)/t)*100);}
+let implEditTarget=null;
+
+function renderImpl(){
+  const grid=document.getElementById('impl-grid');
+  grid.innerHTML='';
+  implModules.forEach((mod,mi)=>{
+    const mStatus=calcImplModStatus(mod);
+    const pct=calcImplPct(mod);
+    const smeta=implMeta[mStatus]||implMeta.upcoming;
+    const card=document.createElement('div');
+    card.className='impl-module-card s-'+mStatus;
+    const msHTML=mod.milestones.map((ms,msi)=>{
+      const meta=implMeta[ms.status];
+      const dotStyle=ms.status==='upcoming'?'background:transparent;border:1.5px solid #ccc;':`background:${meta.dot};`;
+      return`<div class="ms-row">
+        <div class="ms-dot" style="${dotStyle}"></div>
+        <div class="ms-body">
+          <div class="ms-name-text">${ms.name}${ms.status==='today'?'<span class="ms-badge ms-today-b">Hari ini</span>':''}</div>
+          <div class="ms-date-row">
+            <span class="ms-date-text">${fmtRange(ms.date,ms.end)}</span>
+            <button class="ms-edit-btn" onclick="openImplModal(${mi},${msi})">Edit</button>
+          </div>
+        </div>
+        <span class="ms-badge ${meta.badgeCls}">${meta.label}</span>
+      </div>`;
+    }).join('');
+    card.innerHTML=`
+      <div class="impl-header">
+        <div><div class="impl-num">Modul ${String(mod.num).padStart(2,'0')}</div><div class="impl-name">${mod.title}</div></div>
+        <span class="mod-badge ${smeta.badgeCls}">${smeta.label}</span>
+      </div>
+      <div class="impl-prog-wrap">
+        <div class="impl-bar-track"><div class="impl-bar-fill" style="width:${pct}%;background:${implBarColor[mStatus]};"></div></div>
+        <span class="impl-pct">${pct}%</span>
+      </div>
+      <div class="ms-list">${msHTML}</div>`;
+    grid.appendChild(card);
+  });
+  let total=0,done=0,partial=0;
+  implModules.forEach(m=>m.milestones.forEach(ms=>{total++;if(ms.status==='done')done++;if(ms.status==='active'||ms.status==='today')partial++;}));
+  const pct=Math.round(((done+partial*0.5)/total)*100);
+  document.getElementById('impl-m-pct').textContent=pct+'%';
+  document.getElementById('impl-overall-pct').textContent=pct+'%';
+  document.getElementById('impl-prog-fill').style.width=pct+'%';
+  document.getElementById('impl-m-done').textContent=implModules.filter(m=>calcImplModStatus(m)==='done').length;
+  document.getElementById('impl-m-active').textContent=implModules.filter(m=>['active','today'].includes(calcImplModStatus(m))).length;
+}
+function openImplModal(mi,msi){
+  implEditTarget={mi,msi};
+  const ms=implModules[mi].milestones[msi];
+  document.getElementById('im-title').textContent=ms.name;
+  document.getElementById('im-date').value=ms.date;
+  document.getElementById('im-date-end').value=ms.end||'';
+  document.getElementById('im-status').value=ms.status;
+  document.getElementById('impl-modal').classList.add('open');
+}
+function closeImplModal(){document.getElementById('impl-modal').classList.remove('open');implEditTarget=null;}
+function saveImplModal(){
+  if(!implEditTarget)return;
+  const{mi,msi}=implEditTarget;
+  const d=document.getElementById('im-date').value;if(!d)return;
+  implModules[mi].milestones[msi].date=d;
+  implModules[mi].milestones[msi].end=document.getElementById('im-date-end').value||null;
+  implModules[mi].milestones[msi].status=document.getElementById('im-status').value;
+  closeImplModal();renderImpl();
+}
+document.getElementById('impl-modal').onclick=e=>{if(e.target===document.getElementById('impl-modal'))closeImplModal();};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCellModal();closeImplModal();closeConfirm();}});
+
+// INIT
+renderImpl();
+renderInjectTable();
+</script>
+</body>
+</html>
