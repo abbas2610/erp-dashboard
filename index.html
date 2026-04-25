@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Blackjack & DGA — Project Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -430,43 +431,107 @@ const INJECT_ITEMS={
   ],
 };
 
-const cellData={BJ:{},DGA:{}};
+// ══════════════════════════════════
+// SUPABASE INIT
+// ══════════════════════════════════
+const SUPA_URL='https://wyunrzlmiwgozeegrrnn.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5dW5yemxtaXdnb3plZWdycm5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMTQ0MDcsImV4cCI6MjA5MjY5MDQwN30.poAS3LKFM5ylteIobbP_JI3LhMq56jUKQl1-8PQioV0';
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+
+// local cache
+const cellCache={};
 let activeMonths=['Januari','Februari','Maret'];
 let activeCompany='BJ';
 let monthToDelete=null;
 
+function showLoading(msg='Menyimpan...'){
+  let el=document.getElementById('toast');
+  if(!el){el=document.createElement('div');el.id='toast';el.style.cssText='position:fixed;bottom:24px;right:24px;background:#111;color:#fff;font-size:12px;font-weight:700;padding:10px 18px;border-radius:8px;z-index:9999;transition:opacity 0.3s;';document.body.appendChild(el);}
+  el.textContent=msg;el.style.opacity='1';
+}
+function hideLoading(msg=''){
+  const el=document.getElementById('toast');
+  if(!el)return;
+  if(msg){el.textContent=msg;el.style.background=msg.includes('✓')?'#166534':'#991b1b';}
+  setTimeout(()=>{if(el)el.style.opacity='0';},1800);
+}
+
+// ── LOAD all cells from Supabase ──
+async function loadAllData(){
+  showLoading('Memuat data...');
+  try{
+    // load months
+    const{data:mData,error:mErr}=await sb.from('active_months').select('*').order('sort_order');
+    if(mErr)throw mErr;
+    if(mData&&mData.length>0)activeMonths=mData.map(r=>r.month);
+
+    // load cells
+    const{data:cData,error:cErr}=await sb.from('inject_cells').select('*');
+    if(cErr)throw cErr;
+    (cData||[]).forEach(r=>{
+      cellCache[r.company+'|'+r.item+'|'+r.month]={status:r.status,deadline:r.deadline||'',history:[]};
+    });
+
+    // load history
+    const{data:hData,error:hErr}=await sb.from('inject_history').select('*').order('created_at',{ascending:true});
+    if(hErr)throw hErr;
+    (hData||[]).forEach(h=>{
+      const k=h.company+'|'+h.item+'|'+h.month;
+      if(!cellCache[k])cellCache[k]={status:'notyet',deadline:'',history:[]};
+      cellCache[k].history.push({status:h.status,deadline:h.deadline||'',notes:h.notes||'',ts:new Date(h.created_at).getTime()});
+    });
+
+    hideLoading('✓ Data dimuat');
+  }catch(e){
+    console.error(e);
+    hideLoading('⚠ Gagal memuat data');
+  }
+  renderInjectTable();
+}
+
 function getCell(co,item,month){
   const k=co+'|'+item+'|'+month;
-  if(!cellData[co][k])cellData[co][k]={status:'notyet',deadline:'',history:[]};
-  return cellData[co][k];
+  if(!cellCache[k])cellCache[k]={status:'notyet',deadline:'',history:[]};
+  return cellCache[k];
 }
-function setCell(co,item,month,data){cellData[co][co+'|'+item+'|'+month]=data;}
 
-function addMonth(){
+async function addMonth(){
   const idx=MONTHS_L.indexOf(activeMonths[activeMonths.length-1]);
-  if(idx<11){activeMonths.push(MONTHS_L[idx+1]);renderInjectTable();}
-  else alert('Sudah sampai Desember.');
+  if(idx>=11){alert('Sudah sampai Desember.');return;}
+  const newMonth=MONTHS_L[idx+1];
+  showLoading('Menambah bulan...');
+  try{
+    const{error}=await sb.from('active_months').insert({month:newMonth,sort_order:idx+2});
+    if(error)throw error;
+    activeMonths.push(newMonth);
+    hideLoading('✓ Bulan ditambahkan');
+    renderInjectTable();
+  }catch(e){console.error(e);hideLoading('⚠ Gagal menambah bulan');}
 }
 
 function askDeleteMonth(month){
   monthToDelete=month;
   document.getElementById('confirm-title').textContent='Hapus Bulan '+month+'?';
-  document.getElementById('confirm-body').textContent='Semua data inject bulan '+month+' untuk kedua company akan dihapus. Tindakan ini tidak bisa dibatalkan.';
+  document.getElementById('confirm-body').textContent='Semua data inject bulan '+month+' untuk kedua company akan dihapus permanen dari database. Tindakan ini tidak bisa dibatalkan.';
   document.getElementById('confirm-overlay').classList.add('open');
 }
 function closeConfirm(){document.getElementById('confirm-overlay').classList.remove('open');monthToDelete=null;}
-function confirmDeleteMonth(){
+
+async function confirmDeleteMonth(){
   if(!monthToDelete)return;
   if(activeMonths.length<=1){alert('Minimal harus ada 1 bulan.');closeConfirm();return;}
-  // clear data
-  ['BJ','DGA'].forEach(co=>{
-    INJECT_ITEMS[co].forEach(g=>g.items.forEach(item=>{
-      delete cellData[co][co+'|'+item+'|'+monthToDelete];
-    }));
-  });
-  activeMonths=activeMonths.filter(m=>m!==monthToDelete);
-  closeConfirm();
-  renderInjectTable();
+  showLoading('Menghapus bulan...');
+  try{
+    await sb.from('inject_cells').delete().eq('month',monthToDelete);
+    await sb.from('inject_history').delete().eq('month',monthToDelete);
+    await sb.from('active_months').delete().eq('month',monthToDelete);
+    // clear local cache
+    Object.keys(cellCache).forEach(k=>{if(k.endsWith('|'+monthToDelete))delete cellCache[k];});
+    activeMonths=activeMonths.filter(m=>m!==monthToDelete);
+    hideLoading('✓ Bulan dihapus');
+    closeConfirm();
+    renderInjectTable();
+  }catch(e){console.error(e);hideLoading('⚠ Gagal menghapus');}
 }
 
 function switchCompany(co){
@@ -480,7 +545,6 @@ function escAttr(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function renderInjectTable(){
   const thead=document.getElementById('inject-thead');
   const tbody=document.getElementById('inject-tbody');
-  // HEADER
   let thHTML='<tr><th>Aktivitas</th>';
   activeMonths.forEach(m=>{
     thHTML+=`<th class="month-col"><div class="th-month-wrap">
@@ -490,7 +554,6 @@ function renderInjectTable(){
   });
   thHTML+='</tr>';
   thead.innerHTML=thHTML;
-  // BODY
   let tbHTML='';
   INJECT_ITEMS[activeCompany].forEach(g=>{
     tbHTML+=`<tr class="group-header"><td colspan="${1+activeMonths.length}">${g.group}</td></tr>`;
@@ -592,19 +655,36 @@ function renderHistory(history){
   }).join('');
 }
 
-function saveCellModal(){
+async function saveCellModal(){
   if(!cellModalTarget)return;
   const{co,item,month}=cellModalTarget;
-  const cell=getCell(co,item,month);
   const newStatus=cmSelectedStatus;
-  const newDeadline=document.getElementById('cm-date').value;
+  const newDeadline=document.getElementById('cm-date').value||null;
   const notes=document.getElementById('cm-notes').value.trim();
-  cell.history.push({status:newStatus,deadline:newDeadline,notes,ts:Date.now()});
-  cell.status=newStatus;
-  cell.deadline=newDeadline;
-  setCell(co,item,month,cell);
+  showLoading('Menyimpan...');
   closeCellModal();
-  renderInjectTable();
+  try{
+    // upsert cell
+    const{error:e1}=await sb.from('inject_cells').upsert({
+      company:co,item,month,status:newStatus,deadline:newDeadline||null,updated_at:new Date().toISOString()
+    },{onConflict:'company,item,month'});
+    if(e1)throw e1;
+    // insert history
+    const{error:e2}=await sb.from('inject_history').insert({
+      company:co,item,month,status:newStatus,deadline:newDeadline||null,notes:notes||null
+    });
+    if(e2)throw e2;
+    // update local cache
+    const cell=getCell(co,item,month);
+    cell.status=newStatus;
+    cell.deadline=newDeadline||'';
+    cell.history.push({status:newStatus,deadline:newDeadline||'',notes,ts:Date.now()});
+    hideLoading('✓ Tersimpan');
+    renderInjectTable();
+  }catch(e){
+    console.error(e);
+    hideLoading('⚠ Gagal menyimpan');
+  }
 }
 function closeCellModal(){document.getElementById('cell-modal').classList.remove('open');cellModalTarget=null;}
 document.getElementById('cell-modal').onclick=e=>{if(e.target===document.getElementById('cell-modal'))closeCellModal();};
@@ -715,7 +795,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCellModal();cl
 
 // INIT
 renderImpl();
-renderInjectTable();
+loadAllData();
 </script>
 </body>
 </html>
